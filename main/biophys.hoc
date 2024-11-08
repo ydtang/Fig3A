@@ -1,22 +1,8 @@
-/*
-* Dendritic action potentials shape the computational 
-* 	properties of human layer 2/3 cortical neurons( Gidon et al., 2019)
-* 
-* written by 
-* Athanasia Papoutsi and Albert Gidon
-*/
 load_file("../_classlib/TString.hoc")
 load_file("../_classlib/TPointList.hoc")
 objref imp
 objref iondenstity
 objref ConIh,ConIh1,dis,dis1
-//objref ConIh,ConIh1,dis,dis1
-// ConIh=new File()
-// dis=new File()
-// Ih.wopen("OUTPUT/Conih.dat")	
-// dis.wopen("OUTPUT/distanceIh.dat")	
-// ConIh1=new Vector()
-// dis1=new Vector()
 func get_Rin(){local x
 	x = $1
 	imp = new Impedance(x)
@@ -49,56 +35,11 @@ proc active_properties() {
 	forall e_pas = -74
 	forall {insert hd}
 	forall {ehd_hd=-25}
-	//forall ghdbar_hd=0 1.2e-5 
-	//forall insert cat gcatbar_cat=1e-3
-	//forall insert kca
-	//forall gbar_kca=1e-3
-	//forall insert car gcabar_car=0.1 	
-	//forall insert mykca
-	//forall insert cal gcalbar_cal=1e-3 
-	
-	
-	
-	// forall {
-		
-		// if(gcalbar_calH=1) {print "section",secname()}
-		
-	// }
 	forall {insert calH gcalbar_calH=1e-4}
 	forall {insert namr gnabar_namr=1e-3}
-	
-	
-	//forall gnabar_namr=1e-4
-	// forall { 
-	
-		// insert traub
-		// gNabar_traub = .001 //enhance AP increase 
-		// gKbar_traub = .00015 * 3//enhance AP decrease
-		// gLbar_traub =  1/Rm/1000  	
-		// eL_traub = -74.0 		
-		// eK_traub = -80			
-		// eNa_traub = 90 	
-	// }
-	
-	//forall insert traub gNabar_traub = 10 
-	/* forsec apical{
-		insert calH gcalbar_calH=1e-2	
-        //insert namr gnabar_namr=1e-4					
-	} */
-	//gbar_na=1e-5
-	//forall insert na3 gbar_na3=1e-2//gbar_na=1e-5
 	forsec as{
 		//remove the passive properties from soma and axon
-		g_pas = 0
-		//ghdbar_hd=0 
-		//gcalbar_calH=0
-		//gnabar_namr=0
-	    //gcalbar_calH=1e-3
-		//insert calH gcalbar_calH=1e-3	
-        //insert namr gnabar_namr=1e-4
-		// if the model is passive, leave all the passive 
-		// leak as it is.
-		
+		g_pas = 0		
 		insert traub
 		gNabar_traub =0.1//.1 //enhance AP increase 
 		gKbar_traub =  .015 *3//enhance AP decrease
