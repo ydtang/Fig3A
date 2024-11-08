@@ -1,4 +1,4 @@
-![6db3865fee25dc4ff77aacd7eeec8e9](https://github.com/user-attachments/assets/961338c4-05de-47f9-93f1-bf3596649cde)This is the readme for the author's model which replicates Figure 3A in the paper: Aberrant neural activity in the peritumoral cortex underlies the progression of tumor associated seizures. 
+This is the readme for the author's model which replicates Figure 3A in the paper: Aberrant neural activity in the peritumoral cortex underlies the progression of tumor associated seizures. 
 Model usage:
 This code was written in and requires NEURON (tested in version 8.4) which is freely available from http://www.neuron.yale.edu This model was run under the unix/linux and windows 10 operating system.
 
