@@ -1,11 +1,3 @@
-/*
-* Dendritic action potentials shape the computational 
-* 	properties of human layer 2/3 cortical neurons( Gidon et al., 2019)
-* 
-* written by 
-* Athanasia Papoutsi and Albert Gidon
-*
-*/
 nrn_load_dll("../_mod/nrnmech.dll")
 load_file("nrngui.hoc")
 load_file("../_morph/171122005.hoc")
