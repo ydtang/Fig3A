@@ -1,0 +1,367 @@
+/*
+* Novel dendritic action potentials shape the computational 
+* 	properties of human layer 2/3 cortical neurons( Gidon et al., 2019)
+* 
+* written by 
+* Athanasia Papoutsi and Albert Gidon
+*/
+
+load_file("nrngui.hoc")
+
+if(unix_mac_pc() == 3) nrn_load_dll("./../_mod/nrnmech.dll")
+load_file("./../_morph/171122005.hoc")
+load_file("./biophys.hoc")
+load_file("./syns.hoc")
+load_file("./plots.hoc")
+objref IsynAMPA,StimTime,ApicAP,TimeS,SomaAP,Somatime,Ih,APALL,impe,rheo
+objref IsynAMPA1,StimTime1,ApicAP1,TimeS1,SomaAP1,Somatime1,Ih1,impe1
+objref veclist, tempvec
+veclist = new List()
+
+objref ss
+IsynAMPA=new File()
+APALL=new File()
+StimTime=new File()
+ApicAP=new File()
+TimeS=new File()
+SomaAP=new File()
+Somatime=new File()
+Ih=new File()
+impe=new File()
+rheo=new File()
+rheo.wopen("rheo.dat")	
+impe.wopen("impedance.dat")	
+APALL.wopen("APALL.dat")	
+IsynAMPA.wopen("IsynAMPA.dat")	
+StimTime.wopen("StimTime.dat")	
+ApicAP.wopen("ApicAP.dat")	
+TimeS.wopen("Time.dat")	
+SomaAP.wopen("SomaAP.dat")	
+Somatime.wopen("Sspiketime.dat")	
+Ih.wopen("Ih.dat")	
+IsynAMPA1=new Vector()
+StimTime1=new Vector()
+ApicAP1=new Vector()
+TimeS1=new Vector()
+SomaAP1=new Vector()
+Somatime1=new Vector()
+Ih1=new Vector()
+impe1=new Vector()
+
+
+
+
+
+//globals
+objref apc
+soma apc = new APCount(0.5)
+apc.thresh =-10
+apc.record(Somatime1)
+proc conclude(){local x
+	plot_shape()
+	finitialize()
+	//for pl_dcaap.point(0,&x) print "Rin = ", Rin = get_Rin(dcaap_loc) //only one dcaap point.
+	soma Rin=get_Rin(0.5) 
+	print "Rin = ", Rin 
+	soma distance()	
+	//forall print secname(),"apic[61] ", distance(0.5)," um from the soma"
+    //print "apic[61] ", distance(0.5)," um from the soma"	
+	// for iondenstity.each_point(&x){
+		// print secname(),"is located at ",x," um from the soma"				
+	// }
+    //print "plex_X:",plex_X.printf()
+	//for i=0,50{
+		//print "soma distance=",plex_X.x.x(i)," um"
+		//print "soma distance=",plex_X.sclst.o(i).sec," um"
+	//}
+	print "dCaAP is located at ", distance(dcaap_loc)," um from the soma"
+	printf("somatic AP rate: %f Hz",apc.n / (tstop - delay))	
+}
+
+//set parameters for the dcaap. 
+proc add_dcaap(){local dcaap_loc,dcaap_w
+	dcaap_loc = $1
+	insert dCaAP
+	pl_dcaap = new TPointList()
+	pl_dcaap.append(dcaap_loc) 
+	vth_dCaAP(dcaap_loc) = -36
+	D_dCaAP(dcaap_loc) = 0.3
+	vrest_dCaAP(dcaap_loc) = -75
+	refract_period_dCaAP(dcaap_loc) = 200
+	sigma_diff_dCaAP(dcaap_loc) = 21
+	tauA_dCaAP(dcaap_loc) = 3
+	tauB_dCaAP(dcaap_loc) = 0.4
+	w_dCaAP(dcaap_loc) = (dcaap_w = $2) //Adjusting the dCaAP weight manually.
+}
+
+
+proc set_pathways_combination(){local pathwayX,pathwayY,subdomain_inhibition,distal_inhibition,proximal_inhibition,background_excitation
+	initialize_pathways()//initialize
+	dur=30000
+	delay=100
+	//syn_freq_Hz=40
+	//if(bg=1)add_syns(plex_bg,syns,tplay,syn_freq_Hz,delay,dur,ampa=1,nmda=0,basket=0,martinotti=0)
+	if(pathwayX=$1)add_syns(plex_X,syns,tplay,syn_freq_Hz,delay,dur,ampa=1,nmda=1,basket=0,martinotti=0)
+	if(pathwayY=$2)add_syns(plex_Y,syns,tplay,syn_freq_Hz,delay,dur,ampa=1,nmda=1,basket=0,martinotti=0)
+	if(subdomain_inhibition=$3)add_syns(plin_subdomain,syns,tplay,syn_freq_Hz,delay,dur,ampa=0,nmda=0,basket=0,martinotti=1)
+	if(distal_inhibition=$4)add_syns(plin_martinotti,syns,tplay,syn_freq_Hz,delay,dur,ampa=0,nmda=0,basket=0,martinotti=1)
+	if(proximal_inhibition=$5)add_syns(plin_basket,syns,tplay,syn_freq_Hz,delay,dur,ampa=0,nmda=0,basket=1,martinotti=0)
+}
+
+//to init use a context of a section
+proc init_sim(){local dcaap_loc,dcaap_w
+	execute1("vbox.unmap()",0)//only one simulation at a time. rerun for other simulations.//execute statement
+	biophys()
+	init(v_init = -75) 
+	add_dcaap(dcaap_loc = $1,dcaap_w = $2)
+	//plot_panel()
+	
+}
+
+
+proc activate_pathways(){localobj pathway
+	pathway = new TString($s1)
+	if(pathway.equal("X")) set_pathways_combination(1,0,0,0,0,1)
+	if(pathway.equal("Y")) set_pathways_combination(0,1,0,0,0,1)	
+	if(pathway.equal("XY")) set_pathways_combination(1,1,0,0,0,3)
+	if(pathway.equal("XY+inhib")) set_pathways_combination(1,1,1,0,0,4)
+	if(pathway.equal("XY+distal.inhib")) set_pathways_combination(1,1,0,1,0,4)
+	if(pathway.equal("X+proximal.inhib")) set_pathways_combination(1,0,0,0,1,5)	
+}
+
+
+proc test_pulse_uncoupled(){local dcaap_loc,dcaap_w localobj ic
+	strdef str1
+	//k=1
+	//forall {print "K=",k,"sec=",secname() k=k+1}
+	for (ihmax=1.2e-5;ihmax<=1.2e-5;ihmax+=5e-6){
+		init_sim(dcaap_loc = 0.214,dcaap_w = 0)	
+		soma ic = new IClamp(dcaap_loc)
+		ic.dur = 500
+		ic.del = 200
+		tstop = 1000
+		init_plots(dcaap_loc)
+		//graphItem.family(1)//if 1 then keep the line if 0 then erase the line
+		for (ic.amp=0.3;ic.amp <= 0.3;ic.amp += 0.05){ 	
+			print "current injection = ", ic.amp*1000 , " pA"
+			K=1
+			forall {
+				tempvec = new Vector()
+				tempvec.record(&v(0.5))
+				veclist.append(tempvec)
+				 // print "K:",K,secname()
+			     // K=K+1
+  		}
+	
+			sprint(str1, "ihmax=%g", ihmax)			
+			execute(str1)	
+            print "ihmax = ",ihmax			
+			Ih1.record(&soma.i_hd(0.5))
+			ApicAP1.record(&apic[76].v(0.214))
+			TimeS1.record(&t)
+			SomaAP1.record(&soma.v(0.5))
+			run()
+			//continuerun(220)
+			Ih1.printf(Ih)
+			ApicAP1.printf(ApicAP)
+			SomaAP1.printf(SomaAP)
+			TimeS1.printf(TimeS)
+			Somatime1.printf(Somatime)
+			Somatime.printf(" %4.8f\n",-1)		
+			forall {
+				Rin=get_Rin(0.5) 
+				impe.printf(" %4.8f\n",Rin)				
+				}
+			
+	
+		for i = 0, veclist.count()-1 {			
+			for j=0,veclist.o(i).size()-1{
+				APALL.printf(" %4.8f",veclist.o(i).x[j])				
+			}						
+			//veclist.o(i).printf("dump.dat","%4f")
+			APALL.printf("\n")
+		}
+		
+		for j=0,veclist.o(1).size()-1{
+				APALL.printf("%d ",-1)				
+			}
+		APALL.printf("\n")
+		//close("dump.dat")		
+		if (apc.n==1) rheo.printf(" %4.8f\n",ic.amp)	
+		}
+		}
+		//TimeS1.printf(TimeS)
+		plot_shape()
+		plot_morphlogy()
+		soma Rin=get_Rin(0.5) 
+		print "Rin = ", Rin 
+		Ih.close()
+		ApicAP.close()		
+		SomaAP.close()
+		TimeS.close()
+		APALL.close()
+		impe.close()
+		rheo.close()
+		Somatime.close() 
+	
+}
+
+proc test_pulse_coupled(){local dcaap_loc,dcaap_w localobj ic
+	apic[60] {
+		init_sim(dcaap_loc = 0.99,dcaap_w = 4)	
+		ic = new IClamp(dcaap_loc)
+		ic.dur = 1000
+		ic.del = 200
+		tstop = 1400
+		init_plots(dcaap_loc)
+		graphItem.family(1)
+		for (ic.amp=-0.06;ic.amp <= -0.06;ic.amp += 0.02){ 	
+			print "current injection = ", ic.amp*1000 , " pA"
+			run()
+		}
+	}
+}
+
+proc uncoupled(){ local LocSyn
+				  strdef str1
+	
+	
+		for (fre=40;fre<=40;fre+=10){
+		ihmax=1.2e-5
+		tstop = 11000 
+		sprint(str1, "syn_freq_Hz=%g", fre)	
+		print "SYN=",fre
+		//sprint(str1, "Numsyn=%g", fre)			
+		execute(str1)
+		init_points(syns_bg=15,syns_group1=11,syns_group2=25,syns_inh_distal=20,syns_inh_proximal=35)
+		init_sim(dcaap_loc = 0.214,dcaap_w = 0)	
+		activate_pathways($s1,is_coupled = 0)
+		
+		print "syns.count()=",syns.count()
+		for i = 0, syns.count()-1{	
+		//print "valid=", AMPAconnects.o(i).valid()
+		//print "pre=", AMPAconnects.o(i).pre()
+		//print "Weight=",AMPAconnects.o(i).weight
+		tempvec = new Vector()
+		//AMPAconnects.o(i).record(tempvec)	
+		//print "222"	
+        tempvec.record(&syns.o(i).i)		
+		veclist.append(tempvec)				
+		}
+		
+		
+		
+		init_plots(dcaap_loc)
+		//IsynAMPA1.record(&syns.o(1).i)
+		Ih1.record(&apic[76].i_hd(0.5))
+		LocSyn=syns.o(1).get_loc()
+		ApicAP1.record(&dend[56].v(0.5))     
+		TimeS1.record(&t)
+		SomaAP1.record(&soma.v(0.5))
+		// forall {
+			// tempvec = new Vector()
+			// tempvec.record(&v(0.5))
+			// veclist.append(tempvec)
+				 // // print "K:",K,secname()
+			     // // K=K+1
+  		// }
+		run()
+		//print "NSyn = ",syns.count()
+		//print "ISYN = ",syns.o(2).get_loc()
+		//ISYN1=new(&syns.o(1).i)
+		//IsynAMPA.printf("%10.4f \n",-1.1)
+		 // for i = 0, veclist.count()-1 {			
+			// for j=0,veclist.o(i).size()-1{
+				// APALL.printf(" %4.8f",veclist.o(i).x[j])				
+			// }						
+			// //veclist.o(i).printf("dump.dat","%4f")
+			// APALL.printf("\n")
+		// }
+		//nettime1=syns.o(1).i
+		
+		
+			for i = 0, veclist.count()-1 {
+			//print "size=",veclist.o(i).size()			
+				for j=0,veclist.o(i).size()-1{
+					//StimTime.printf(" %4.8f",veclist.o(i).x[j])	
+					IsynAMPA.printf(" %4.8f",veclist.o(i).x[j])	
+					//print "Stim=",veclist.o(i).x[j]					
+				}						
+			//veclist.o(i).printf("dump.dat","%4f")
+				IsynAMPA.printf("\n")				
+			}
+		StimTime1=tplay.o(1)
+		print "APC = ",Somatime1.size()
+		print "APC1 = ",apc.n()
+	    printf("somatic AP rate: %f Hz",apc.n / (tstop - delay))
+		//print "NISYN = ",ISYN1.size()
+		//IsynAMPA1.printf(IsynAMPA)
+		Ih1.printf(Ih)
+		StimTime1.printf(StimTime)
+		TimeS1.printf(TimeS)
+		ApicAP1.printf(ApicAP)
+		SomaAP1.printf(SomaAP)
+		Somatime1.printf(Somatime)
+		Somatime.printf("%4f\n",-1)
+		}
+		printf("somatic AP1 rate: %f Hz",apc.n / (tstop - delay))
+		conclude()
+		plot_morphlogy()
+		printf("somatic AP2 rate: %f Hz",Somatime1.size())
+		IsynAMPA.close()
+		Ih.close()
+		StimTime.close()
+		TimeS.close()
+		ApicAP.close()		
+		SomaAP.close()
+		Somatime.close()
+		APALL.close()
+		
+	
+}
+ 
+ 
+proc coupled(){
+
+	apic[60]{
+		tstop = 1000
+		init_points(syns_bg = 100,syns_group1 = 35,syns_group2 = 35,syns_inh_distal = 35,syns_inh_proximal = 35)
+		 init_sim(dcaap_loc = 0.99,dcaap_w = 0)
+		apic[60] activate_pathways($s1,is_coupled = 1)
+		init_plots(dcaap_loc)	
+		IsynAMPA1.record(&syns.o(1).i)
+		Ih1.record(&soma.i_hd(0.5))
+		LocSyn=syns.o(1).get_loc()
+		ApicAP1.record(&apic[60].v(0.99))
+		TimeS1.record(&t)
+		SomaAP1.record(&soma.v(0.5))
+		run()
+		
+		//print "NSyn = ",syns.count()
+		//print "ISYN = ",syns.o(2).get_loc()
+		//ISYN1=new(&syns.o(1).i)
+		//IsynAMPA.printf("%10.4f \n",-1.1)
+		 
+		//nettime1=syns.o(1).i
+		StimTime1=tplay.o(1)
+		print "APC = ",Somatime1.size()
+		print "APC1 = ",apc.n()
+	    printf("somatic AP rate: %f Hz",apc.n / (tstop - delay))
+		
+		IsynAMPA1.printf(IsynAMPA)
+		Ih1.printf(Ih)
+		StimTime1.printf(StimTime)
+		ApicAP1.printf(ApicAP)
+		TimeS1.printf(TimeS)
+		SomaAP1.printf(SomaAP)
+		Somatime1.printf(Somatime)
+		conclude()
+		IsynAMPA.close()
+		Ih.close()
+		StimTime.close()
+		ApicAP.close()
+		TimeS.close()
+		SomaAP.close()
+	}
+}
+
