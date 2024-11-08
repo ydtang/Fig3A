@@ -1,5 +1,3 @@
-
-
 load_file("xor.hoc")
 
 objref vbox
